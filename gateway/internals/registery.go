@@ -38,11 +38,7 @@ type Registery struct {
 	storage *RedisClient
 }
 
-func NewRegistery(log *logger.Logger) *Registery {
-	storage, err := NewRedisClient("127.0.0.1:6379", RegistryPassowrd, RegistryDB)
-	if err != nil {
-		log.Error("failed to create redis client: %v", err)
-	}
+func NewRegistery(storage *RedisClient, log *logger.Logger) *Registery {
 	return &Registery{
 		log:     log,
 		storage: storage,

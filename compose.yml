@@ -1,22 +1,107 @@
-version: '3'
+version: '3.8'
+
 services:
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
+    command: redis-server --requirepass 123456
     ports:
       - "6379:6379"
-  
-  ikyk:
-    build: .
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ikyk-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
     ports:
       - "8080:8080"
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_healthy
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      REDIS_PASSWORD: 123456
+      PORT: 8080
+      ENVIRONMENT: production
+      LOKI_URL: http://loki:3100
+    restart: unless-stopped
+    networks:
+      - ikyk-network
+
+  management-api:
+    build:
+      context: .
+      dockerfile: apps/Dockerfile
+    ports:
+      - "9090:9090"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: 123456
+      PORT: 9090
+      ENVIRONMENT: production
+    restart: unless-stopped
+    networks:
+      - ikyk-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - ikyk-network
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - ikyk-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+    networks:
+      - ikyk-network
+
+volumes:
+  redis_data:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+
+networks:
+  ikyk-network:
+    driver: bridge

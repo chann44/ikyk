@@ -1,6 +1,6 @@
 module github.com/chann44/ikyk/gateway
 
-go 1.25.3
+go 1.23
 
 replace github.com/chann44/ikyk/pkg => ../pkg
 

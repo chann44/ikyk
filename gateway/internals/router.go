@@ -2,7 +2,9 @@ package internals
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -19,14 +21,23 @@ func SetupGateway(log *logger.Logger) http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(logger.LoggerMiddleware(log))
 
-	// Initialize components
-	registry := NewRegistery(log)
-	metrics := NewMetricsCollector()
+	// Get Redis host from environment or use default
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "127.0.0.1"
+	}
+	redisAddr := fmt.Sprintf("%s:6379", redisHost)
 
-	redisClient, err := NewRedisClient("127.0.0.1:6379", RegistryPassowrd, RegistryDB)
+	// Initialize Redis client
+	redisClient, err := NewRedisClient(redisAddr, RegistryPassowrd, RegistryDB)
 	if err != nil {
 		log.Error("failed to create redis client: %v", err)
+		panic(fmt.Sprintf("Cannot start without Redis connection: %v", err))
 	}
+
+	// Initialize components
+	registry := NewRegistery(redisClient, log)
+	metrics := NewMetricsCollector()
 
 	cache := NewCacheManager(redisClient, log, 5*time.Minute)
 	circuitBreaker := NewCircuitBreaker(redisClient, log, 5, 2, 60*time.Second)
