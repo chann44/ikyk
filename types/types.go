@@ -13,3 +13,10 @@ type Service struct {
 	Mu        sync.RWMutex
 	LastCheck time.Time
 }
+
+type ServiceData struct {
+	Name      string    `json:"name"`
+	URL       string    `json:"url"`
+	Healthy   bool      `json:"healthy"`
+	LastCheck time.Time `json:"last_check"`
+}

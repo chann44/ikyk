@@ -14,7 +14,6 @@ import (
 	types "github.com/chann44/ikyk/types"
 )
 
-const RegistryKey = "services"
 const RegistryDB = 0
 const RegistryPassowrd = "123456"
 
