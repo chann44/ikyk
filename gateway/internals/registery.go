@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chann44/ikyk/logger"
-	types "github.com/chann44/ikyk/types"
+	"github.com/chann44/ikyk/pkg/logger"
+	"github.com/chann44/ikyk/pkg/types"
 )
 
 const RegistryDB = 0

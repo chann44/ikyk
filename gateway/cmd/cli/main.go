@@ -1,6 +1,6 @@
 package main
 
-import "github.com/chann44/ikyk/internals"
+import "github.com/chann44/ikyk/gateway/internals"
 
 func main() {
 	internals.StartServer(internals.ServerConfig{

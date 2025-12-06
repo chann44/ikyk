@@ -1,6 +1,7 @@
 package internals
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chann44/ikyk/logger"
+	"github.com/chann44/ikyk/pkg/logger"
 )
 
 type Gateway struct {
