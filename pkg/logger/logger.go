@@ -49,7 +49,10 @@ func (h *lokiHandler) Handle(ctx context.Context, record slog.Record) error {
 	}
 
 	if h.config.Environment == "production" && h.config.LokiURL != "" {
+		fmt.Fprintf(os.Stderr, "[DEBUG] Sending log to Loki: %s - %s\n", record.Level, record.Message)
 		go h.sendToLoki(record)
+	} else {
+		fmt.Fprintf(os.Stderr, "[DEBUG] NOT sending to Loki. Env=%s, LokiURL=%s\n", h.config.Environment, h.config.LokiURL)
 	}
 
 	return nil
@@ -78,23 +81,45 @@ func (h *lokiHandler) sendToLoki(record slog.Record) {
 		"time":    record.Time.Format(time.RFC3339),
 	}
 
+	// Extract additional attributes for better querying
+	var method, status string
 	record.Attrs(func(attr slog.Attr) bool {
 		logEntry[attr.Key] = attr.Value.Any()
+		// Extract specific fields for labels
+		switch attr.Key {
+		case "method":
+			method = attr.Value.String()
+		case "status":
+			status = fmt.Sprintf("%v", attr.Value.Any())
+		}
 		return true
 	})
 
 	logJSON, err := json.Marshal(logEntry)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to marshal log entry: %v\n", err)
 		return
+	}
+
+	// Build labels with more context
+	labels := map[string]string{
+		"app":         h.config.AppName,
+		"level":       record.Level.String(),
+		"environment": h.config.Environment,
+	}
+
+	// Add optional labels if available
+	if method != "" {
+		labels["method"] = method
+	}
+	if status != "" {
+		labels["status"] = status
 	}
 
 	payload := lokiPayload{
 		Streams: []lokiStream{
 			{
-				Stream: map[string]string{
-					"app":   h.config.AppName,
-					"level": record.Level.String(),
-				},
+				Stream: labels,
 				Values: [][]string{
 					{
 						fmt.Sprintf("%d", record.Time.UnixNano()),
@@ -107,11 +132,13 @@ func (h *lokiHandler) sendToLoki(record slog.Record) {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to marshal Loki payload: %v\n", err)
 		return
 	}
 
 	req, err := http.NewRequest("POST", h.config.LokiURL+"/loki/api/v1/push", bytes.NewReader(body))
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create Loki request: %v\n", err)
 		return
 	}
 
@@ -119,9 +146,16 @@ func (h *lokiHandler) sendToLoki(record slog.Record) {
 
 	resp, err := h.client.Do(req)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to send to Loki: %v\n", err)
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		fmt.Fprintf(os.Stderr, "Loki returned error %d: %s\n", resp.StatusCode, string(bodyBytes))
+		return
+	}
 	io.Copy(io.Discard, resp.Body)
 }
 

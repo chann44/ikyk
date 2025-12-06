@@ -47,10 +47,11 @@ services:
         condition: service_healthy
     environment:
       REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_PORT: 6380
       REDIS_PASSWORD: 123456
       PORT: 9090
       ENVIRONMENT: production
+      LOKI_URL: http://loki:3100
     restart: unless-stopped
     networks:
       - ikyk-network
@@ -89,6 +90,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - prometheus
       - loki

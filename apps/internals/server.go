@@ -23,6 +23,7 @@ type GatewaySetupFunc func(log *logger.Logger) http.Handler
 func StartServer(config ServerConfig, setupRouter GatewaySetupFunc) {
 	loggerConfig := logger.LoggerConfig{
 		Environment: config.Environment,
+		LokiURL:     os.Getenv("LOKI_URL"),
 		AppName:     config.Name,
 	}
 	log := logger.NewLogger(loggerConfig)

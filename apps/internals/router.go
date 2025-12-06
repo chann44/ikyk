@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/chann44/ikyk/apps/internals/handlers"
 	"github.com/chann44/ikyk/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const RegistryDB = 0
@@ -65,6 +66,9 @@ func SetupManagementAPI(log *logger.Logger) http.Handler {
 	// Health status
 	r.Get("/api/health/services", healthHandler.ListServiceHealth)
 	r.Get("/api/health/services/{name}", healthHandler.GetServiceHealth)
+
+	// Prometheus metrics endpoint
+	r.Handle("/metrics", promhttp.Handler())
 
 	return r
 }

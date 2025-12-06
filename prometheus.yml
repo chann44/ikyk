@@ -10,3 +10,9 @@ scrape_configs:
       - targets: ['gateway:8080']
     metrics_path: '/metrics'
     scrape_interval: 10s
+
+  - job_name: 'management-api'
+    static_configs:
+      - targets: ['management-api:9090']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
