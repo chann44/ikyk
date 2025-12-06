@@ -7,5 +7,5 @@ func main() {
 		Name:        "ikyk",
 		Port:        "8080",
 		Environment: "development",
-	}, internals.SetupGateway)
+	}, int)
 }
